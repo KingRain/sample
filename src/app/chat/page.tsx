@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import ChatInput from "../../components/ChatInput"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -206,14 +205,9 @@ export default function ChatPage() {
               >
                 <div className="chat-message-content">
                   {msg.type === 'image' && msg.imageUrl ? (
-                    <Image
+                    <img
                       src={msg.imageUrl}
-                      alt="Generated"
-                      width={512}
-                      height={512}
-                      style={{ maxWidth: "100%", borderRadius: "8px", margin: "8px 0", display: "block" }}
-                      unoptimized
-                    />
+                      alt="Generated" />
                   ) : (
                     <p>{msg.content}</p>
                   )}

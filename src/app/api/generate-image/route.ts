@@ -1,25 +1,36 @@
 import { GoogleGenAI } from '@google/genai';
-import { writeFile } from 'fs';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-function saveBinaryFile(content: Buffer): { filePath: string } {
+async function saveImageToSupabase(content: Buffer): Promise<{ url: string }> {
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const fileName = `${uuidv4()}.png`;
-    const filePath = `/generated/${fileName}`;
-    const folderPath = path.join(process.cwd(), 'public', 'generated');
-    if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
+    const bucketName = 'images';
+    const filePath = `generated/${fileName}`;
+
+    try {
+        const { data, error } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, content, {
+                cacheControl: '3600',
+                upsert: false,
+            });
+
+        if (error) throw error;
+
+        const { data: publicUrl } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(filePath);
+
+        return { url: publicUrl.publicUrl };
+    } catch (error) {
+        console.error('Error uploading to Supabase:', error);
+        throw error;
     }
-    const fullPath = path.join(folderPath, fileName);
-    writeFile(fullPath, content, (err) => {
-        if (err) {
-            console.error(`Error writing file ${fileName}:`, err);
-            return;
-        }
-        console.log(`File ${fileName} saved to file system at ${fullPath}.`);
-    });
-    return { filePath };
 }
 
 async function generateImage(prompt: string) {
@@ -55,15 +66,15 @@ async function generateImage(prompt: string) {
         if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
             const inlineData = chunk.candidates[0].content.parts[0].inlineData;
             const buffer = Buffer.from(inlineData.data || '', 'base64');
-            const { filePath } = saveBinaryFile(buffer);
+            const { url } = await saveImageToSupabase(buffer);
             return {
-                fileName: filePath
+                imageUrl: url
             };
         }
     }
 
     return {
-        fileName: ''
+        imageUrl: ''
     };
 }
 
