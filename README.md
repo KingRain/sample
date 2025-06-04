@@ -1,3 +1,3 @@
 # sample
 
-Live Demo: https://sample-delta-eight.vercel.app/login
+https://sample-delta-eight.vercel.app/login
