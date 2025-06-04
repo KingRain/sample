@@ -16,7 +16,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/chat`,
+          redirectTo: `https://sample-delta-eight.vercel.app/chat`,
         },
       });
       if (error) throw error;
