@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NeonChat",
-  description: "Modern dark-themed chat interface",
+  title: "SampleChat",
+  description: "Modern dark-themed chatGPT Replica",
 };
 
 export default function RootLayout({

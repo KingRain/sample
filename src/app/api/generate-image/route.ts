@@ -22,18 +22,21 @@ async function saveImageToSupabase(content: Buffer): Promise<{ url: string }> {
 
         if (error) throw error;
 
-        const { data: publicUrl } = supabase.storage
+        const { data, error: signedError } = await supabase.storage
             .from(bucketName)
-            .getPublicUrl(filePath);
+            .createSignedUrl(filePath, 3600); // 1 hour expiration
 
-        return { url: publicUrl.publicUrl };
+        if (signedError) throw signedError;
+        if (!data) throw new Error('Failed to create signed URL');
+
+        return { url: data.signedUrl };
     } catch (error) {
         console.error('Error uploading to Supabase:', error);
         throw error;
     }
 }
 
-async function generateImage(prompt: string) {
+async function generateImage(prompt: string): Promise<{ imageUrl: string }> {
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error('❌ GEMINI_API_KEY is missing from environment variables.');
@@ -43,7 +46,7 @@ async function generateImage(prompt: string) {
     const config = {
         responseModalities: ['IMAGE', 'TEXT'],
         responseMimeType: 'text/plain',
-    }
+    };
 
     const model = 'gemini-2.0-flash-preview-image-generation';
     const contents = [
@@ -62,19 +65,20 @@ async function generateImage(prompt: string) {
         contents,
     });
 
+    let imageUrl = '';
+    
     for await (const chunk of response) {
         if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
             const inlineData = chunk.candidates[0].content.parts[0].inlineData;
             const buffer = Buffer.from(inlineData.data || '', 'base64');
             const { url } = await saveImageToSupabase(buffer);
-            return {
-                imageUrl: url
-            };
+            imageUrl = url;
+            break; // Only need the first image
         }
     }
 
     return {
-        imageUrl: ''
+        imageUrl
     };
 }
 
@@ -88,5 +92,6 @@ export async function POST(request: NextRequest) {
         });
     }
     const response = await generateImage(prompt);
+    console.log(response);
     return NextResponse.json(response);
 }

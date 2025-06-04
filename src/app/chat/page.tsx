@@ -80,7 +80,7 @@ export default function ChatPage() {
             role: "assistant",
             content: '',
             type: 'image' as const,
-            imageUrl: data.fileName
+            imageUrl: data.imageUrl
           }
         ]);
       } else {
