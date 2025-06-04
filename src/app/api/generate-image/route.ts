@@ -13,7 +13,7 @@ async function saveImageToSupabase(content: Buffer): Promise<{ url: string }> {
     const filePath = `generated/${fileName}`;
 
     try {
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
             .from(bucketName)
             .upload(filePath, content, {
                 cacheControl: '3600',
