@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
+import Image from 'next/image';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { User } from '@supabase/supabase-js';
 
@@ -51,10 +52,14 @@ export default function Navbar() {
       </div>
       <div className="navbar-right">
         {user && user.user_metadata?.avatar_url ? (
-          <img
+          <Image
             src={user.user_metadata.avatar_url}
             alt={user.user_metadata.name || "User"}
             className="user-avatar"
+            width={32}
+            height={32}
+            style={{ borderRadius: '50%', objectFit: 'cover' }}
+            priority
           />
         ) : (
           <FaUserCircle className="user-icon" />

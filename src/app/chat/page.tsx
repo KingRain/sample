@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { Container } from "react-bootstrap";
+import Image from "next/image";
 import ChatInput from "../../components/ChatInput"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -25,9 +25,9 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const [message, setMessage] = useState("");
+  const [, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  const [, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(models[0]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -206,9 +206,14 @@ export default function ChatPage() {
               >
                 <div className="chat-message-content">
                   {msg.type === 'image' && msg.imageUrl ? (
-                    <img
+                    <Image
                       src={msg.imageUrl}
-                      alt="Generated" />
+                      alt="Generated"
+                      width={512}
+                      height={512}
+                      style={{ maxWidth: "100%", borderRadius: "8px", margin: "8px 0", display: "block" }}
+                      unoptimized
+                    />
                   ) : (
                     <p>{msg.content}</p>
                   )}

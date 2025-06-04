@@ -5,13 +5,13 @@ import { Form, Dropdown, Image } from "react-bootstrap";
 import styled from "styled-components";
 import { FaPaperclip, FaPaperPlane, FaChevronDown } from "react-icons/fa";
 
-interface ModelConfig {
+export interface ModelConfig {
   name: string;
   id: string;
   type: 'text' | 'image';
 }
 
-interface ChatInputProps {
+export interface ChatInputProps {
   onSendMessage: (message: string, image?: File) => Promise<void>;
   selectedModel: ModelConfig;
   setSelectedModel: (model: ModelConfig) => void;
