@@ -179,139 +179,181 @@ int main(){
 }`,
   "2/1": `#include <stdio.h>
 
-int is_lost(int frame, int k, int attempt) {
-    if (attempt == 1 && frame % k == 0)
-        return 1;
-    return 0;
+int totalframes, k;
+int transmissionCount = 0, retransmissionCount = 0;
+
+int receiver(int frame) {
+    transmissionCount++;
+
+    if (transmissionCount % k == 0) {
+        printf("Frame lost\\n");
+        return -1;
+    }
+
+    printf("Frame received\\n");
+    return frame;
 }
 
-int main() {
-    int n = 10;
-    int k = 4;
-    int total = 0;
-    int retx = 0;
-    int seq = 0;
+void sender() {
+    int frame = 0, sentFrames = 0, ack;
 
-    for (int i = 1; i <= n; i++) {
-        int attempt = 1;
+    while (sentFrames < totalframes) {
 
-        while (1) {
-            total++;
-            printf("Sending Frame %d with Seq %d\\n", i, seq);
+        ack = receiver(frame);
 
-            if (is_lost(i, k, attempt)) {
-                printf("Frame %d Lost! Timeout.\\n", i);
-                retx++;
-                attempt++;
-            } else {
-                printf("ACK received for Frame %d\\n\\n", i);
-                seq = 1 - seq;
-                break;
-            }
+        if (ack == frame) {
+            frame = 1 - frame;   // toggle sequence bit
+            sentFrames++;
+        } else {
+            printf("Retransmitting frame\\n");
+            retransmissionCount++;
         }
     }
 
-    printf("\\nTotal frames sent = %d\\n", total);
-    printf("Total retransmissions = %d\\n", retx);
+    printf("Packets sent: %d\\n", transmissionCount);
+    printf("Total retransmissions: %d\\n", retransmissionCount);
+}
 
+int main() {
+    printf("Enter total frames: ");
+    scanf("%d", &totalframes);
+
+    printf("Enter value for k: ");
+    scanf("%d", &k);
+
+    sender();
     return 0;
 }`,
   "2/2": `#include <stdio.h>
 
-int main() {
-    int total_frames = 10;
-    int window_size = 4;
+int totalframes, windowSize, k;
+int transmissionCount = 0, retransmissionCount = 0;
 
-    int base = 0;
-    int next_seq = 0;
+int receiver(int frame, int received[]) {
+    transmissionCount++;
 
-    int total_sent = 0;
-    int retransmissions = 0;
-
-    int lost[10] = {0};
-
-    printf("Selective Repeat ARQ Simulation\\n");
-    printf("SWS = 4, RWS = 4\\n\\n");
-
-    while (base < total_frames) {
-
-        while (next_seq < base + window_size && next_seq < total_frames) {
-            printf("Sending Frame Seq %d\\n", next_seq);
-            total_sent++;
-
-            if ((next_seq + 1) % 5 == 0) {
-                printf("Frame %d Lost!\\n", next_seq);
-                lost[next_seq] = 1;
-            }
-
-            next_seq++;
-        }
-
-        for (int i = base; i < next_seq; i++) {
-            if (lost[i] == 1) {
-                printf("Retransmitting Frame Seq %d\\n", i);
-                total_sent++;
-                retransmissions++;
-                lost[i] = 0;
-            }
-        }
-
-        base = next_seq;
+    if (transmissionCount % k == 0) {
+        printf("Frame %d lost\\n", frame);
+        return -1;
     }
 
-    printf("\\nTotal packets sent = %d\\n", total_sent);
-    printf("Total retransmissions = %d\\n", retransmissions);
+    if (!received[frame]) {
+        received[frame] = 1;
+        printf("Frame %d received\\n", frame);
+        return frame;
+    }
 
+    return -1;
+}
+
+void sender() {
+    int base = 0;
+    int nextFrame = 0;
+
+    int acked[200] = {0};
+    int received[200] = {0};
+
+    while (base < totalframes) {
+
+        while (nextFrame < base + windowSize && nextFrame < totalframes) {
+            if (!acked[nextFrame]) {
+                int ack = receiver(nextFrame, received);
+
+                if (ack != -1)
+                    acked[ack] = 1;
+                else {
+                    retransmissionCount++;
+                    printf("Retransmitting frame %d\\n", nextFrame);
+                    receiver(nextFrame, received);
+                    acked[nextFrame] = 1;
+                }
+            }
+            nextFrame++;
+        }
+
+        while (acked[base] && base < totalframes) {
+            base++;
+        }
+    }
+
+    printf("Transmissions: %d\\n", transmissionCount);
+    printf("Retransmissions: %d\\n", retransmissionCount);
+}
+
+int main() {
+    printf("Enter total frames: ");
+    scanf("%d", &totalframes);
+
+    printf("Enter window size: ");
+    scanf("%d", &windowSize);
+
+    printf("Enter k: ");
+    scanf("%d", &k);
+
+    sender();
     return 0;
 }`,
   "2/3": `#include <stdio.h>
 
-int main() {
-    int total_frames = 10;
-    int window_size = 4;
+int totalframes, windowSize, k;
+int transmissionCount = 0, retransmissionCount = 0;
 
-    int total_sent = 0;
-    int retransmissions = 0;
+int receiver(int frame, int *expectedFrame) {
+    transmissionCount++;
 
-    printf("Go-Back-N ARQ Simulation\\n");
-    printf("SWS = 4, RWS = 1\\n\\n");
-
-    int i = 0;
-
-    while (i < total_frames) {
-        int start = i;
-        int end = i + window_size;
-
-        if (end > total_frames)
-            end = total_frames;
-
-        for (int j = start; j < end; j++) {
-            printf("Sending Frame Seq %d\\n", j);
-            total_sent++;
-
-            if ((j + 1) % 5 == 0) {
-                printf("Frame %d Lost!\\n", j);
-
-                // retransmit entire window
-                for (int k = j; k < end; k++) {
-                    printf("Retransmitting Frame Seq %d\\n", k);
-                    total_sent++;
-                    retransmissions++;
-                }
-
-                i = end;
-                goto next_window;
-            }
-        }
-
-        i = end;
-
-        next_window:;
+    if (transmissionCount % k == 0) {
+        printf("Frame %d lost\\n", frame);
+        return -1;
     }
 
-    printf("\\nTotal packets sent = %d\\n", total_sent);
-    printf("Total retransmissions = %d\\n", retransmissions);
+    if (frame == *expectedFrame) {
+        printf("Frame %d received\\n", frame);
+        (*expectedFrame)++;
+        return frame;
+    }
 
+    return -1;
+}
+
+void sender() {
+    int base = 0, nextFrame = 0;
+    int expectedFrame = 0;
+
+    while (base < totalframes) {
+
+        // Send window
+        while (nextFrame < base + windowSize && nextFrame < totalframes) {
+            int ack = receiver(nextFrame, &expectedFrame);
+
+            if (ack == -1) {
+                printf("Error detected, retransmitting from frame %d\\n", base);
+                retransmissionCount++;
+
+                nextFrame = base;   // Go back
+                break;
+            }
+
+            nextFrame++;
+        }
+
+        base = expectedFrame;
+    }
+
+    printf("Transmissions: %d\\n", transmissionCount);
+    printf("Retransmissions: %d\\n", retransmissionCount);
+}
+
+int main() {
+    printf("Enter total frames: ");
+    scanf("%d", &totalframes);
+
+    printf("Enter window size: ");
+    scanf("%d", &windowSize);
+
+    printf("Enter k: ");
+    scanf("%d", &k);
+
+    sender();
     return 0;
 }`,
   "3/1": `#include <stdio.h>
