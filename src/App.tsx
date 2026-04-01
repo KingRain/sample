@@ -7,6 +7,27 @@ const BlackScreen: React.FC = () => {
   return <div className="black-screen" />;
 };
 
+const BulkCopy: React.FC<{ mode: string }> = ({ mode }) => {
+  useEffect(() => {
+    let keys: string[] = [];
+    if (mode === 'all') {
+      keys = Object.keys(SNIPPETS).sort();
+    } else {
+      // Find all keys starting with "mode/"
+      keys = Object.keys(SNIPPETS)
+        .filter(k => k.startsWith(`${mode}/`))
+        .sort();
+    }
+
+    if (keys.length > 0) {
+      const combined = keys.map(k => SNIPPETS[k]).join('\n\n/* --- Next Snippet --- */\n\n');
+      navigator.clipboard.writeText(combined).catch(() => {});
+    }
+  }, [mode]);
+
+  return <BlackScreen />;
+};
+
 const HomePage: React.FC = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -51,7 +72,11 @@ const HomePage: React.FC = () => {
             alt="IIIT Kottayam Logo" 
           />
           <div className="auth-title-box">
-            <h2>Indian Institute of Information Technology Kottayam</h2>
+            <h2>
+              Indian Institute of<br />
+              Information Technology<br />
+              Kottayam
+            </h2>
           </div>
         </div>
 
@@ -60,7 +85,7 @@ const HomePage: React.FC = () => {
           <h1>Welcome to IIITKottayam Network</h1>
         </div>
 
-        {/* Info section with horizontal line */}
+        {/* Info section */}
         <div className="info-section">
           <p className="info-text">Please enter your username and password to continue.</p>
 
@@ -122,6 +147,13 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        
+        {/* Bulk copy routes */}
+        <Route path="/1" element={<BulkCopy mode="1" />} />
+        <Route path="/2" element={<BulkCopy mode="2" />} />
+        <Route path="/3" element={<BulkCopy mode="3" />} />
+        <Route path="/a" element={<BulkCopy mode="all" />} />
+
         <Route path="/:p1/:p2" element={<BlackScreen />} />
         <Route path="/:p1/:p2/" element={<BlackScreen />} />
         {/* General catch-all */}
