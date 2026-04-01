@@ -377,12 +377,14 @@ void dvr(int cost[N][N]) {
         }
     }
 
-    // Distance Vector (Floyd-Warshall style)
+    // Floyd-Warshall (safe update)
     for (k = 0; k < N; k++) {
         for (i = 0; i < N; i++) {
             for (j = 0; j < N; j++) {
-                if (dist[i][j] > dist[i][k] + dist[k][j]) {
-                    dist[i][j] = dist[i][k] + dist[k][j];
+                if (dist[i][k] != INF && dist[k][j] != INF) {
+                    if (dist[i][j] > dist[i][k] + dist[k][j]) {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                    }
                 }
             }
         }
@@ -412,13 +414,20 @@ int main() {
     printf("Original Network:\\n");
     dvr(cost);
 
-    // Link failure
+    // 🔥 Link failure (isolate node E completely)
+    cost[0][4] = INF;
+    cost[4][0] = INF;
+
     cost[1][4] = INF;
     cost[4][1] = INF;
+
     cost[2][4] = INF;
     cost[4][2] = INF;
 
-    printf("\\nAfter Link Failure (B-E & C-E):\\n");
+    cost[3][4] = INF;
+    cost[4][3] = INF;
+
+    printf("\\nAfter Link Failure (Node E isolated):\\n");
     dvr(cost);
 
     return 0;
