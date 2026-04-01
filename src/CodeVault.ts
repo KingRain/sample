@@ -179,46 +179,48 @@ int main(){
 }`,
   "2/1": `#include <stdio.h>
 
-int totalframes, k;
+int totalFrames, k;
 int transmissionCount = 0, retransmissionCount = 0;
 
 int receiver(int frame) {
     transmissionCount++;
 
     if (transmissionCount % k == 0) {
-        printf("Frame lost\\n");
+        printf("Frame %d lost\\n", frame);
         return -1;
     }
 
-    printf("Frame received\\n");
+    printf("Frame %d received\\n", frame);
     return frame;
 }
 
 void sender() {
-    int frame = 0, sentFrames = 0, ack;
+    int frame = 0;
+    int sent = 0;
 
-    while (sentFrames < totalframes) {
-
-        ack = receiver(frame);
+    while (sent < totalFrames) {
+        int ack = receiver(frame);
 
         if (ack == frame) {
+            // success → move to next frame
             frame = 1 - frame;   // toggle sequence bit
-            sentFrames++;
+            sent++;
         } else {
-            printf("Retransmitting frame\\n");
+            // retransmit same frame
             retransmissionCount++;
+            printf("Retransmitting frame %d\\n", frame);
         }
     }
 
-    printf("Packets sent: %d\\n", transmissionCount);
+    printf("\\nTotal transmissions: %d\\n", transmissionCount);
     printf("Total retransmissions: %d\\n", retransmissionCount);
 }
 
 int main() {
     printf("Enter total frames: ");
-    scanf("%d", &totalframes);
+    scanf("%d", &totalFrames);
 
-    printf("Enter value for k: ");
+    printf("Enter loss interval k: ");
     scanf("%d", &k);
 
     sender();
@@ -226,10 +228,10 @@ int main() {
 }`,
   "2/2": `#include <stdio.h>
 
-int totalframes, windowSize, k;
+int totalFrames, windowSize, k;
 int transmissionCount = 0, retransmissionCount = 0;
 
-int receiver(int frame, int received[]) {
+int receiver(int frame) {
     transmissionCount++;
 
     if (transmissionCount % k == 0) {
@@ -237,57 +239,57 @@ int receiver(int frame, int received[]) {
         return -1;
     }
 
-    if (!received[frame]) {
-        received[frame] = 1;
-        printf("Frame %d received\\n", frame);
-        return frame;
-    }
-
-    return -1;
+    printf("Frame %d received\\n", frame);
+    return frame;
 }
 
 void sender() {
     int base = 0;
     int nextFrame = 0;
+    int acked[100] = {0};
 
-    int acked[200] = {0};
-    int received[200] = {0};
+    while (base < totalFrames) {
 
-    while (base < totalframes) {
-
-        while (nextFrame < base + windowSize && nextFrame < totalframes) {
+        // Send frames in window
+        while (nextFrame < base + windowSize && nextFrame < totalFrames) {
             if (!acked[nextFrame]) {
-                int ack = receiver(nextFrame, received);
+                int ack = receiver(nextFrame);
 
                 if (ack != -1)
                     acked[ack] = 1;
-                else {
-                    retransmissionCount++;
-                    printf("Retransmitting frame %d\\n", nextFrame);
-                    receiver(nextFrame, received);
-                    acked[nextFrame] = 1;
-                }
             }
             nextFrame++;
         }
 
-        while (acked[base] && base < totalframes) {
-            base++;
+        // Retransmit ONLY lost frames
+        for (int i = base; i < nextFrame; i++) {
+            if (!acked[i]) {
+                printf("Retransmitting frame %d\\n", i);
+                retransmissionCount++;
+
+                int ack = receiver(i);
+                if (ack != -1)
+                    acked[i] = 1;
+            }
         }
+
+        // Slide window
+        while (acked[base] && base < totalFrames)
+            base++;
     }
 
-    printf("Transmissions: %d\\n", transmissionCount);
-    printf("Retransmissions: %d\\n", retransmissionCount);
+    printf("\\nTotal transmissions: %d\\n", transmissionCount);
+    printf("Total retransmissions: %d\\n", retransmissionCount);
 }
 
 int main() {
     printf("Enter total frames: ");
-    scanf("%d", &totalframes);
+    scanf("%d", &totalFrames);
 
     printf("Enter window size: ");
     scanf("%d", &windowSize);
 
-    printf("Enter k: ");
+    printf("Enter loss interval k: ");
     scanf("%d", &k);
 
     sender();
@@ -295,10 +297,10 @@ int main() {
 }`,
   "2/3": `#include <stdio.h>
 
-int totalframes, windowSize, k;
+int totalFrames, windowSize, k;
 int transmissionCount = 0, retransmissionCount = 0;
 
-int receiver(int frame, int *expectedFrame) {
+int receiver(int frame, int expected) {
     transmissionCount++;
 
     if (transmissionCount % k == 0) {
@@ -306,51 +308,54 @@ int receiver(int frame, int *expectedFrame) {
         return -1;
     }
 
-    if (frame == *expectedFrame) {
+    if (frame == expected) {
         printf("Frame %d received\\n", frame);
-        (*expectedFrame)++;
         return frame;
+    } else {
+        printf("Frame %d discarded (out of order)\\n", frame);
+        return -1;
     }
-
-    return -1;
 }
 
 void sender() {
-    int base = 0, nextFrame = 0;
-    int expectedFrame = 0;
+    int base = 0;
+    int nextFrame = 0;
+    int expected = 0;
 
-    while (base < totalframes) {
+    while (base < totalFrames) {
 
         // Send window
-        while (nextFrame < base + windowSize && nextFrame < totalframes) {
-            int ack = receiver(nextFrame, &expectedFrame);
+        while (nextFrame < base + windowSize && nextFrame < totalFrames) {
+            int ack = receiver(nextFrame, expected);
 
             if (ack == -1) {
-                printf("Error detected, retransmitting from frame %d\\n", base);
+                // LOSS → Go back and retransmit window
+                printf("Error → Retransmitting from frame %d\\n", base);
                 retransmissionCount++;
 
-                nextFrame = base;   // Go back
+                nextFrame = base;
                 break;
+            } else {
+                expected++;
+                nextFrame++;
             }
-
-            nextFrame++;
         }
 
-        base = expectedFrame;
+        base = expected;
     }
 
-    printf("Transmissions: %d\\n", transmissionCount);
-    printf("Retransmissions: %d\\n", retransmissionCount);
+    printf("\\nTotal transmissions: %d\\n", transmissionCount);
+    printf("Total retransmissions: %d\\n", retransmissionCount);
 }
 
 int main() {
     printf("Enter total frames: ");
-    scanf("%d", &totalframes);
+    scanf("%d", &totalFrames);
 
     printf("Enter window size: ");
     scanf("%d", &windowSize);
 
-    printf("Enter k: ");
+    printf("Enter loss interval k: ");
     scanf("%d", &k);
 
     sender();
